@@ -29,18 +29,24 @@ jobs:
         with:
           gradle-version: '8.9'
 
-      - name: Extract and locate project
+      - name: Extract and build Debug APK
         run: |
           if ls *.zip 1> /dev/null 2>&1; then
             unzip -o "*.zip"
           fi
-          PROJECT_DIR=$(find . -maxdepth 3 \( -name "build.gradle" -o -name "build.gradle.kts" \) -exec dirname {} \; | head -n 1)
-          if [ -n "$PROJECT_DIR" ] && [ "$PROJECT_DIR" != "." ]; then
-            cp -rn "$PROJECT_DIR"/* . 2>/dev/null || true
+
+          ROOT_DIR=$(find . -maxdepth 4 \( -name "settings.gradle" -o -name "settings.gradle.kts" -o -name "gradlew" \) -exec dirname {} \; | head -n 1)
+
+          if [ -n "$ROOT_DIR" ]; then
+            cd "$ROOT_DIR"
           fi
 
-      - name: Build Debug APK
-        run: |
+          if [ ! -f "settings.gradle" ] && [ ! -f "settings.gradle.kts" ]; then
+            printf 'pluginManagement { repositories { google(); mavenCentral(); gradlePluginPortal() } }\ndependencyResolutionManagement { repositories { google(); mavenCentral() } }\n' > settings.gradle
+            sed -i "s/id 'com.android.application'/id 'com.android.application' version '8.5.2'/g" build.gradle 2>/dev/null || true
+            sed -i 's/id("com.android.application")/id("com.android.application") version "8.5.2"/g' build.gradle.kts 2>/dev/null || true
+          fi
+
           if [ -f "./gradlew" ]; then
             chmod +x ./gradlew
             ./gradlew assembleDebug
