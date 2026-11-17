@@ -1,8 +1,8 @@
-name: NEXUS Gaming Engine APK
+name: Build Android APK
 
 on:
   push:
-    branches: [ main ]
+    branches: [ "main" ]
   workflow_dispatch:
 
 jobs:
@@ -10,52 +10,28 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Descargar repositorio
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Instalar Java 17
+      - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
-          distribution: 'temurin'
           java-version: '17'
+          distribution: 'temurin'
 
-      - name: Configurar Android SDK
+      - name: Setup Android SDK
         uses: android-actions/setup-android@v3
         with:
-          packages: 'platform-tools'
+          packages: 'platform-tools platforms;android-34 build-tools;34.0.0'
 
-      - name: Instalar componentes Android
-        run: yes | sdkmanager "platforms;android-34" "build-tools;34.0.0"
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
 
-      - name: Instalar Gradle 8.9
-        uses: gradle/actions/setup-gradle@v4
-        with:
-          gradle-version: '8.9'
+      - name: Build Debug APK
+        run: ./gradlew assembleDebug
 
-      - name: Extraer código fuente
-        run: |
-          if ls *.zip 1> /dev/null 2>&1; then
-            unzip -o "*.zip"
-          fi
-          if [ ! -f "build.gradle" ] && [ ! -f "build.gradle.kts" ]; then
-            SUBDIR=$(find . -maxdepth 2 \( -name "build.gradle" -o -name "build.gradle.kts" \) -exec dirname {} \; | head -n 1)
-            if [ -n "$SUBDIR" ] && [ "$SUBDIR" != "." ]; then
-              cp -rn "$SUBDIR"/. .
-            fi
-          fi
-
-      - name: Compilar APK
-        run: |
-          if [ -f "./gradlew" ]; then
-            chmod +x ./gradlew
-            ./gradlew assembleDebug
-          else
-            gradle assembleDebug
-          fi
-
-      - name: Publicar APK
+      - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: NEXUS-Gaming-Engine-APK
-          path: "**/build/outputs/apk/**/*.apk"
-          if-no-files-found: error
+          name: NEXUS-Debug-APK
+          path: app/build/outputs/apk/debug/*.apk
