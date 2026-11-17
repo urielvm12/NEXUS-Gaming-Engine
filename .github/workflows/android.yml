@@ -1,19 +1,12 @@
-
-name: NEXUS Gaming Engine 1.4 - Android APK
+name: NEXUS Gaming Engine APK
 
 on:
-  workflow_dispatch:
   push:
-    branches:
-      - principal
-      - main
-
-permissions:
-  contents: read
+    branches: [ "main" ]
+  workflow_dispatch:
 
 jobs:
   build:
-    name: Build Android APK
     runs-on: ubuntu-latest
 
     steps:
@@ -23,15 +16,14 @@ jobs:
       - name: Instalar Java 17
         uses: actions/setup-java@v4
         with:
-          distribution: temurin
           java-version: '17'
+          distribution: 'temurin'
 
       - name: Preparar Android SDK
         uses: android-actions/setup-android@v3
 
       - name: Instalar componentes Android
-        run: |
-          sdkmanager "platform-tools" "platforms;android-35" "build-tools;35.0.0"
+        run: sdkmanager "platform-tools" "platforms;android-34" "build-tools;34.0.0"
 
       - name: Instalar Gradle 8.9
         uses: gradle/actions/setup-gradle@v4
@@ -40,23 +32,24 @@ jobs:
 
       - name: Extraer código fuente
         run: |
-          mkdir -p nexus-source
-          ZIP_FILE=$(find . -maxdepth 1 -iname '*1.4-source.zip' -print -quit)
-          if [ -z "$ZIP_FILE" ]; then
-            echo "No se encontró el ZIP del código fuente"
-            exit 1
+          unzip -q NEXUS-Gaming-Engine*.zip -d src_temp
+          if [ -d src_temp/NEXUS-Gaming-Engine* ]; then
+            mv src_temp/NEXUS-Gaming-Engine*/* .
+          else
+            mv src_temp/* .
           fi
-          unzip -q "$ZIP_FILE" -d nexus-source
 
       - name: Compilar APK
-        working-directory: nexus-source/NEXUS-Gaming-Engine
         run: |
-          gradle --no-daemon --stacktrace assembleDebug
+          if [ -f "./gradlew" ]; then
+            chmod +x gradlew
+            ./gradlew assembleDebug
+          else
+            gradle assembleDebug
+          fi
 
       - name: Publicar APK
         uses: actions/upload-artifact@v4
         with:
-          name: NEXUS-Gaming-Engine-1.4-APK
-          path: nexus-source/NEXUS-Gaming-Engine/app/build/outputs/apk/debug/app-debug.apk
-          if-no-files-found: error
-          retention-days: 30
+          name: NEXUS-Gaming-Engine-APK
+          path: "**/build/outputs/apk/debug/*.apk"
